@@ -1,97 +1,159 @@
-/* Daf design tokens. Logical properties (inline-start/end) keep the chrome correct in RTL. */
+/* Daf design tokens. Logical properties (inline-start/end) keep the chrome correct in RTL.
+   Palette from the app icon: a navy sheet, blue-to-cyan ink, and an amber caret.
+   Light = "Paper", dark = "Ink". On Windows 11 the chrome is see-through to Mica ([data-mica='on']);
+   everywhere else it is painted solid, so the transparent window never shows holes. */
 :root {
-  --ui-font: 'Segoe UI Variable Text', 'Segoe UI', system-ui, -apple-system, 'Noto Sans Hebrew', 'Arial Hebrew', sans-serif;
-  --ed-font: Consolas, monospace;
+  --ui-font: 'Segoe UI Variable Text', 'Segoe UI', system-ui, -apple-system, 'IBM Plex Sans Hebrew', 'Noto Sans Hebrew', sans-serif;
+  --ui-font-display: 'Segoe UI Variable Display', 'Segoe UI', system-ui, sans-serif;
+  --ed-font: 'IBM Plex Mono', 'IBM Plex Sans Hebrew', Consolas, monospace;
   --ed-font-size: 14px;
+  --icon-font: 'Segoe Fluent Icons', 'Segoe MDL2 Assets';
 
-  --bg: #f6f6f4;
+  /* Shape and motion. */
+  --r-xs: 4px;
+  --r-s: 6px;
+  --r-m: 8px;
+  --r-l: 12px;
+  --r-xl: 16px;
+  --dur-1: 120ms;
+  --dur-2: 200ms;
+  --dur-3: 320ms;
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-spring: cubic-bezier(0.34, 1.4, 0.64, 1);
+  --titlebar-h: 40px;
+  --caption-w: 46px;
+
+  /* Brand. */
+  --brand-1: #4f7dff;
+  --brand-2: #36b3ff;
+  --brand-grad: linear-gradient(135deg, var(--brand-1), var(--brand-2));
+
+  --bg: #eceff5;
+  --chrome-bg: var(--bg);
   --surface-1: #ffffff;
-  --surface-2: #ececea;
-  --surface-3: #e2e2df;
-  --border: #d9d9d5;
-  --fg: #1f2328;
-  --fg-muted: #656d76;
-  --accent: #2f6feb;
+  --surface-2: #f2f4f8;
+  --surface-3: #e6e9f0;
+  --hover: rgb(20 30 60 / 0.06);
+  --pressed: rgb(20 30 60 / 0.1);
+  --border: rgb(20 30 60 / 0.1);
+  --border-strong: rgb(20 30 60 / 0.16);
+  --fg: #1a1f2e;
+  --fg-muted: #586178;
+  --fg-subtle: #8b93a7;
+  --accent: #3d6bff;
+  --accent-hover: #2d5cf0;
   --accent-fg: #ffffff;
-  --accent-soft: #dbe7ff;
-  --danger: #c4314b;
-  --danger-bg: #fde7eb;
-  --warn-bg: #fff4d6;
-  --warn-border: #e8c766;
-  --dirty: #d18616;
-  --shadow: 0 8px 28px rgb(0 0 0 / 0.16), 0 1px 3px rgb(0 0 0 / 0.1);
+  --accent-soft: rgb(61 107 255 / 0.12);
+  --accent-ring: rgb(61 107 255 / 0.35);
+  --danger: #d13c55;
+  --danger-bg: #fde8ec;
+  --warn: #b86400;
+  --warn-bg: #fff3dc;
+  --warn-border: #f0c870;
+  --dirty: #ef8a10;
+
+  --glass-bg: rgb(250 251 254 / 0.78);
+  --glass-blur: blur(28px) saturate(1.8);
+  --glass-edge: inset 0 1px 0 rgb(255 255 255 / 0.7);
+  --backdrop: rgb(16 22 40 / 0.22);
+
+  --elev-1: 0 0 0 1px rgb(20 30 60 / 0.07), 0 1px 2px rgb(20 30 60 / 0.06), 0 6px 20px rgb(20 30 60 / 0.06);
+  --elev-2: 0 0 0 1px rgb(20 30 60 / 0.09), 0 4px 10px rgb(20 30 60 / 0.08), 0 14px 36px rgb(20 30 60 / 0.14);
+  --elev-3: 0 0 0 1px rgb(20 30 60 / 0.09), 0 10px 24px rgb(20 30 60 / 0.12), 0 32px 80px rgb(20 30 60 / 0.24);
+  --shadow: var(--elev-2);
 
   --ed-bg: #ffffff;
-  --ed-fg: #1f2328;
-  --ed-caret: #1f2328;
-  --ed-selection: #b4cdfa;
-  --ed-selection-blur: #d8e2f2;
+  --ed-fg: #1a1f2e;
+  --ed-caret: #f08400;
+  --ed-selection: #cddbff;
+  --ed-selection-blur: #e2e8f5;
   /* Translucent on purpose: the selection layer is drawn underneath the line. */
-  --ed-active-line: rgb(47 111 235 / 0.05);
-  --ed-gutter-bg: #fafaf9;
-  --ed-gutter-fg: #9aa0a6;
-  --ed-match: #e3ebc8;
-  --ed-search: #ffe58f;
-  --ed-search-current: #ffc53d;
-  --ed-whitespace: #c4c4c0;
+  --ed-active-line: rgb(61 107 255 / 0.05);
+  --ed-gutter-bg: var(--ed-bg);
+  --ed-gutter-fg: #b3b9c7;
+  --ed-match: rgb(61 107 255 / 0.13);
+  --ed-search: #ffe9a6;
+  --ed-search-current: #ffc845;
+  --ed-whitespace: #c9cedb;
 
-  --tok-keyword: #a626a4;
-  --tok-string: #2b7a30;
-  --tok-number: #b35900;
-  --tok-comment: #7b828a;
-  --tok-function: #2a5bd7;
-  --tok-type: #0b7285;
-  --tok-property: #8a4d00;
-  --tok-definition: #1f2328;
-  --tok-punct: #4b535c;
-  --tok-meta: #7b5aa6;
+  --tok-keyword: #7c3aed;
+  --tok-string: #0b8a5c;
+  --tok-number: #c2410c;
+  --tok-comment: #8b93a7;
+  --tok-function: #2563eb;
+  --tok-type: #0e7490;
+  --tok-property: #9a5a00;
+  --tok-definition: #1a1f2e;
+  --tok-punct: #586178;
+  --tok-meta: #a21caf;
 
   color-scheme: light;
 }
 
 :root[data-theme='dark'] {
-  --bg: #1b1d21;
-  --surface-1: #24272c;
-  --surface-2: #2c3036;
-  --surface-3: #363b42;
-  --border: #3a3f46;
-  --fg: #e3e5e8;
-  --fg-muted: #9198a1;
-  --accent: #5b8def;
-  --accent-fg: #0d1117;
-  --accent-soft: #24365a;
-  --danger: #ff7b8a;
-  --danger-bg: #4a1f27;
-  --warn-bg: #3d3214;
-  --warn-border: #8a6d1f;
-  --dirty: #e3a33b;
-  --shadow: 0 10px 32px rgb(0 0 0 / 0.5), 0 1px 3px rgb(0 0 0 / 0.4);
+  --bg: #0a0d18;
+  --surface-1: #1a2033;
+  --surface-2: #151a2a;
+  --surface-3: #242b42;
+  --hover: rgb(255 255 255 / 0.06);
+  --pressed: rgb(255 255 255 / 0.1);
+  --border: rgb(255 255 255 / 0.08);
+  --border-strong: rgb(255 255 255 / 0.14);
+  --fg: #e6e9f2;
+  --fg-muted: #9ba4ba;
+  --fg-subtle: #69738e;
+  --accent: #6f97ff;
+  --accent-hover: #86a8ff;
+  --accent-fg: #0b1020;
+  --accent-soft: rgb(111 151 255 / 0.17);
+  --accent-ring: rgb(111 151 255 / 0.45);
+  --danger: #ff7b8f;
+  --danger-bg: #4a1f2a;
+  --warn: #ffb454;
+  --warn-bg: #3a2d12;
+  --warn-border: #8a6a22;
+  --dirty: #ffb454;
 
-  --ed-bg: #1e2125;
-  --ed-fg: #dcdfe4;
-  --ed-caret: #f0f2f5;
-  --ed-selection: #31508a;
-  --ed-selection-blur: #2c3646;
-  --ed-active-line: rgb(255 255 255 / 0.04);
-  --ed-gutter-bg: #1e2125;
-  --ed-gutter-fg: #5f6670;
-  --ed-match: #3a4a2e;
-  --ed-search: #5c4a12;
-  --ed-search-current: #8a6a12;
-  --ed-whitespace: #4a5059;
+  --glass-bg: rgb(28 34 54 / 0.76);
+  --glass-edge: inset 0 1px 0 rgb(255 255 255 / 0.06);
+  --backdrop: rgb(3 5 12 / 0.5);
 
-  --tok-keyword: #d197e8;
-  --tok-string: #93c98a;
-  --tok-number: #e9a66b;
-  --tok-comment: #7d8590;
-  --tok-function: #79a8ff;
-  --tok-type: #5fc4cf;
-  --tok-property: #e0b979;
-  --tok-definition: #dcdfe4;
-  --tok-punct: #a9b0b8;
-  --tok-meta: #b39ddb;
+  --elev-1: 0 0 0 1px rgb(255 255 255 / 0.06), 0 1px 2px rgb(0 0 0 / 0.3), 0 8px 24px rgb(0 0 0 / 0.28);
+  --elev-2: 0 0 0 1px rgb(255 255 255 / 0.08), 0 4px 12px rgb(0 0 0 / 0.35), 0 16px 40px rgb(0 0 0 / 0.45);
+  --elev-3: 0 0 0 1px rgb(255 255 255 / 0.08), 0 12px 28px rgb(0 0 0 / 0.4), 0 36px 90px rgb(0 0 0 / 0.6);
+
+  --ed-bg: #161c2e;
+  --ed-fg: #dfe4f0;
+  --ed-caret: #ffb454;
+  --ed-selection: #2a3d70;
+  --ed-selection-blur: #222b44;
+  --ed-active-line: rgb(111 151 255 / 0.065);
+  --ed-gutter-fg: #4a546e;
+  --ed-match: rgb(111 151 255 / 0.18);
+  --ed-search: #5a4614;
+  --ed-search-current: #8a6512;
+  --ed-whitespace: #38405a;
+
+  --tok-keyword: #c4a7ff;
+  --tok-string: #8fd6a8;
+  --tok-number: #ffb27a;
+  --tok-comment: #69738e;
+  --tok-function: #82aaff;
+  --tok-type: #7fd6e6;
+  --tok-property: #f0c987;
+  --tok-definition: #e6e9f2;
+  --tok-punct: #9ba4ba;
+  --tok-meta: #e0a3f0;
 
   color-scheme: dark;
+}
+
+/* Windows 11: a light wash over Mica pulls the wallpaper tint toward the brand. */
+:root[data-mica='on'] {
+  --chrome-bg: rgb(246 248 252 / 0.42);
+}
+:root[data-mica='on'][data-theme='dark'] {
+  --chrome-bg: rgb(4 6 14 / 0.62);
 }
 
 * {
@@ -103,7 +165,7 @@ body {
   margin: 0;
   height: 100%;
   overflow: hidden;
-  background: var(--bg);
+  background: var(--chrome-bg);
   color: var(--fg);
   font-family: var(--ui-font);
   font-size: 13px;
@@ -120,12 +182,74 @@ button {
   outline-offset: -2px;
 }
 
+::selection {
+  background: var(--accent-soft);
+}
+
 kbd,
 .kbd {
   font-family: var(--ui-font);
   font-size: 11px;
-  color: var(--fg-muted);
+  color: var(--fg-subtle);
   white-space: nowrap;
   direction: ltr;
   unicode-bidi: isolate;
+}
+
+/* Thin, rounded overlay-style scrollbars (WebView2 / Chromium). */
+::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+::-webkit-scrollbar-track,
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  border: 3px solid transparent;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--fg) 16%, transparent) padding-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background-color: color-mix(in srgb, var(--fg) 30%, transparent);
+}
+::-webkit-scrollbar-thumb:active {
+  background-color: color-mix(in srgb, var(--fg) 42%, transparent);
+}
+
+/* Shared entrances for floating surfaces. */
+@keyframes daf-pop {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+}
+@keyframes daf-rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+}
+@keyframes daf-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+/* Floating glass: menus, the palette, dialogs, toasts. */
+.glass {
+  background: var(--glass-bg);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  box-shadow: var(--glass-edge), var(--elev-2);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+  }
 }

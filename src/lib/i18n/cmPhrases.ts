@@ -8,6 +8,8 @@ export const cmPhrasesHe: Record<string, string> = {
   'match case': 'התאמת רישיות',
   'regexp': 'ביטוי רגולרי',
   'by word': 'מילה שלמה',
+  'ignore niqqud': 'התעלם מניקוד',
+  'niqqud and final letters': 'שָׁלוֹם = שלום, ם = מ, ״ = "',
   'replace': 'החלף',
   'replace all': 'החלף הכל',
   'close': 'סגור',
@@ -26,4 +28,9 @@ export const cmPhrasesHe: Record<string, string> = {
   'Unfold line': 'פתח שורה',
   'Selection deleted': 'הבחירה נמחקה',
   'Control character': 'תו בקרה',
+  // @codemirror/merge (compare view)
+  '$ unchanged lines': '$ שורות זהות',
+  'Revert this chunk': 'החזר את השינוי',
+  'Accept': 'קבל',
+  'Reject': 'דחה',
 };

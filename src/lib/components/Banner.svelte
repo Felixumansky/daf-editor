@@ -33,28 +33,35 @@
 {/if}
 
 <style>
+  /* An inset callout at the top of the page, not a full-width strip. */
   .banner {
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 6px 12px;
+    margin: 8px 10px 2px;
+    padding: 6px 8px 6px 14px;
+    border: 1px solid var(--warn-border);
+    border-radius: var(--r-m);
     background: var(--warn-bg);
-    border-bottom: 1px solid var(--warn-border);
     flex-shrink: 0;
+    animation: daf-pop var(--dur-2) var(--ease-out);
   }
   .banner.info {
     background: var(--accent-soft);
-    border-bottom-color: var(--border);
+    border-color: color-mix(in srgb, var(--accent) 25%, transparent);
   }
   span {
     flex: 1;
   }
   button {
-    padding: 3px 10px;
-    border: 1px solid var(--border);
-    border-radius: 6px;
+    height: 26px;
+    padding: 0 12px;
+    border: none;
+    border-radius: var(--r-s);
     background: var(--surface-1);
+    box-shadow: 0 0 0 1px var(--border);
     cursor: pointer;
+    transition: background var(--dur-1);
   }
   button:hover {
     background: var(--surface-2);

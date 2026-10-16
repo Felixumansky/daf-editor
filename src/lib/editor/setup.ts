@@ -5,12 +5,15 @@ import {
 } from '@codemirror/view';
 import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands';
 import { bracketMatching, foldGutter, foldKeymap, indentOnInput, indentUnit } from '@codemirror/language';
-import { highlightSelectionMatches, search, searchKeymap } from '@codemirror/search';
+import { highlightSelectionMatches, searchKeymap } from '@codemirror/search';
 
 import { dafHighlight, dafTheme } from './theme';
 import { directionExtension, type DirectionMode } from './rtl/directionPlugin';
 import { commentIsolates } from './rtl/isolates';
 import { bidiControls } from './rtl/bidiControls';
+import { dafSearch } from './searchPanel';
+import { cleanPaste } from './cleanPaste';
+import { inlineImages } from './images';
 import type { Sel } from '$lib/ipc/api';
 
 /** Per-document settings that can change at runtime. Shared compartment objects work across states. */
@@ -25,6 +28,7 @@ export const comps = {
   readonly: new Compartment(),
   phrases: new Compartment(),
   bidi: new Compartment(),
+  cleanPaste: new Compartment(),
 };
 
 export interface DocConfig {
@@ -38,8 +42,11 @@ export interface DocConfig {
   readonly: boolean;
   phrases: Record<string, string>;
   bidi: string;
+  cleanPaste: boolean;
   /** Files above the "large" threshold skip features whose cost grows with the document. */
   large: boolean;
+  /** The document this editor shows; enables inline pictures and screenshot paste. */
+  docId?: string;
 }
 
 export const ext = {
@@ -53,13 +60,26 @@ export const ext = {
   whitespace: (on: boolean): Extension => (on ? highlightWhitespace() : []),
   readonly: (on: boolean): Extension => [EditorState.readOnly.of(on), EditorView.editable.of(!on)],
   phrases: (p: Record<string, string>): Extension => EditorState.phrases.of(p),
+  cleanPaste: (on: boolean): Extension => (on ? cleanPaste : []),
 };
 
 /** CodeMirror's default keys, minus the ones Daf's command registry owns (it runs first anyway). */
 const editorKeymap = keymap.of([...defaultKeymap, ...searchKeymap, ...historyKeymap, ...foldKeymap, indentWithTab]);
 
 export function createEditorState(text: string, cfg: DocConfig, listener: Extension, sel?: Sel[]): EditorState {
-  const extensions: Extension[] = [
+  const extensions = editorExtensions(cfg, listener);
+  let selection: EditorSelection | undefined;
+  if (sel?.length) {
+    const max = text.length;
+    const clamp = (n: number) => Math.max(0, Math.min(max, n));
+    selection = EditorSelection.create(sel.map((r) => EditorSelection.range(clamp(r.anchor), clamp(r.head))));
+  }
+  return EditorState.create({ doc: text, selection, extensions });
+}
+
+/** Everything a Daf editor has; also used by the compare view's editors. */
+export function editorExtensions(cfg: DocConfig, listener: Extension): Extension[] {
+  return [
     comps.gutters.of(ext.gutters(cfg.lineNumbers)),
     comps.bidi.of(bidiControls(cfg.bidi)),
     history(),
@@ -72,7 +92,7 @@ export function createEditorState(text: string, cfg: DocConfig, listener: Extens
     crosshairCursor(),
     highlightActiveLine(),
     cfg.large ? [] : [bracketMatching(), highlightSelectionMatches()],
-    search({ top: true }),
+    dafSearch(),
     editorKeymap,
     dafTheme,
     comps.language.of([]),
@@ -83,13 +103,8 @@ export function createEditorState(text: string, cfg: DocConfig, listener: Extens
     comps.whitespace.of(ext.whitespace(cfg.showWhitespace)),
     comps.readonly.of(ext.readonly(cfg.readonly)),
     comps.phrases.of(ext.phrases(cfg.phrases)),
+    comps.cleanPaste.of(ext.cleanPaste(cfg.cleanPaste)),
+    cfg.docId && !cfg.large ? inlineImages(cfg.docId) : [],
     listener,
   ];
-  let selection: EditorSelection | undefined;
-  if (sel?.length) {
-    const max = text.length;
-    const clamp = (n: number) => Math.max(0, Math.min(max, n));
-    selection = EditorSelection.create(sel.map((r) => EditorSelection.range(clamp(r.anchor), clamp(r.head))));
-  }
-  return EditorState.create({ doc: text, selection, extensions });
 }

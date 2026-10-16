@@ -2,6 +2,7 @@
   import { CATEGORY_TITLES, registry, type Category, type Command } from '$lib/commands/registry';
   import { pick } from '$lib/i18n/index.svelte';
   import { ws } from '$lib/state/workspace.svelte';
+  import Icon from './Icon.svelte';
 
   const ORDER: Category[] = ['file', 'edit', 'search', 'view', 'format', 'help'];
 
@@ -64,13 +65,13 @@
         {pick(CATEGORY_TITLES[cat])}
       </button>
       {#if open === cat}
-        <div class="menu" role="menu">
+        <div class="menu glass" role="menu">
           {#each entries(cat) as entry, i (entry?.id ?? `sep-${i}`)}
             {#if entry === null}
               <div class="sep" role="separator"></div>
             {:else}
               <button role="menuitem" disabled={entry.enabled ? !entry.enabled() : false} onclick={() => run(entry)}>
-                <span class="check">{entry.checked?.() ? '✓' : ''}</span>
+                <span class="check">{#if entry.checked?.()}<Icon name="check" size={13} stroke={2.4} />{/if}</span>
                 <span class="label">{pick(entry.title)}</span>
                 <span class="kbd">{registry.keyLabel(entry.id)}</span>
               </button>
@@ -83,12 +84,12 @@
 </nav>
 
 <style>
+  /* Lives inside the title bar: no background of its own. */
   .menubar {
     display: flex;
     align-items: center;
-    height: 30px;
-    padding-inline: 4px;
-    background: var(--surface-2);
+    gap: 1px;
+    height: 100%;
     flex-shrink: 0;
     user-select: none;
   }
@@ -96,37 +97,45 @@
     position: relative;
   }
   .head {
-    height: 24px;
+    height: 28px;
     padding: 0 10px;
     border: none;
-    border-radius: 5px;
+    border-radius: var(--r-s);
     background: transparent;
+    color: var(--fg);
+    font-size: 12.5px;
     cursor: default;
+    transition: background var(--dur-1);
   }
-  .head:hover,
+  .head:hover {
+    background: var(--hover);
+  }
   .head.open {
-    background: var(--surface-3);
+    background: var(--pressed);
   }
   .menu {
     position: absolute;
     inset-inline-start: 0;
-    top: 28px;
+    top: 34px;
     z-index: 40;
-    min-width: 260px;
-    padding: 4px;
-    background: var(--surface-1);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    box-shadow: var(--shadow);
+    min-width: 270px;
+    padding: 5px;
+    border-radius: var(--r-l);
+    transform-origin: top left;
+    animation: daf-pop var(--dur-2) var(--ease-out);
+  }
+  :global([dir='rtl']) .menu {
+    transform-origin: top right;
   }
   .menu button {
     display: flex;
     align-items: center;
     gap: 8px;
     width: 100%;
-    padding: 5px 10px 5px 4px;
+    height: 30px;
+    padding: 0 10px 0 6px;
     border: none;
-    border-radius: 5px;
+    border-radius: var(--r-s);
     background: transparent;
     text-align: start;
     cursor: default;
@@ -136,12 +145,17 @@
     background: var(--accent-soft);
     outline: none;
   }
+  .menu button:hover:not(:disabled) .kbd,
+  .menu button:focus-visible .kbd {
+    color: var(--fg-muted);
+  }
   .menu button:disabled {
-    opacity: 0.45;
+    opacity: 0.4;
   }
   .check {
-    width: 16px;
-    text-align: center;
+    display: grid;
+    place-items: center;
+    width: 18px;
     color: var(--accent);
   }
   .label {
@@ -150,7 +164,7 @@
   }
   .sep {
     height: 1px;
-    margin: 4px 6px;
+    margin: 5px 8px;
     background: var(--border);
   }
 </style>

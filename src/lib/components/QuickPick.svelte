@@ -2,6 +2,7 @@
   import { untrack } from 'svelte';
   import { ui, type QuickPickSpec } from '$lib/ui.svelte';
   import { ws } from '$lib/state/workspace.svelte';
+  import Icon from './Icon.svelte';
 
   let { spec }: { spec: QuickPickSpec } = $props();
 
@@ -33,8 +34,10 @@
     if (spec.items && !items.length) return;
     if (error) return;
     const item = spec.items ? items[index] : null;
+    // `spec` reads `ui.quickPick` live, so it is null once closed: take the callback first.
+    const { onAccept } = spec;
     close();
-    spec.onAccept(item ?? null, query);
+    onAccept(item ?? null, query);
   }
 
   function onKey(e: KeyboardEvent) {
@@ -60,7 +63,9 @@
 <!-- svelte-ignore a11y_click_events_have_key_events -->
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div class="backdrop" onclick={close}>
-  <div class="panel" onclick={(e) => e.stopPropagation()} role="dialog" tabindex="-1" aria-modal="true" aria-label={spec.placeholder}>
+  <div class="panel glass" onclick={(e) => e.stopPropagation()} role="dialog" tabindex="-1" aria-modal="true" aria-label={spec.placeholder}>
+    <div class="field">
+    <Icon name={spec.items ? 'search' : 'arrow-right'} size={16} />
     <input
       bind:this={input}
       bind:value={query}
@@ -74,6 +79,7 @@
       aria-controls="qp-list"
       aria-activedescendant={items.length ? `qp-${selected}` : undefined}
     />
+    </div>
     {#if error}
       <div class="message error">{error}</div>
     {/if}
@@ -110,44 +116,67 @@
     display: flex;
     justify-content: center;
     align-items: flex-start;
-    padding-top: 56px;
+    padding-top: 64px;
+    background: color-mix(in srgb, var(--backdrop) 50%, transparent);
+    animation: daf-fade var(--dur-2) var(--ease-out);
   }
   .panel {
     width: min(640px, calc(100vw - 32px));
-    background: var(--surface-1);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    box-shadow: var(--shadow);
+    border-radius: var(--r-xl);
+    box-shadow: var(--glass-edge), var(--elev-3);
     overflow: hidden;
+    animation: daf-pop var(--dur-2) var(--ease-out);
+  }
+  .field {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding-inline: 16px;
+    border-bottom: 1px solid var(--border);
+    color: var(--accent);
   }
   input {
-    width: 100%;
-    padding: 10px 14px;
+    flex: 1;
+    min-width: 0;
+    padding: 14px 0;
     border: none;
-    border-bottom: 1px solid var(--border);
     background: transparent;
     color: var(--fg);
     font: inherit;
-    font-size: 14px;
+    font-size: 15px;
     outline: none;
+  }
+  input::placeholder {
+    color: var(--fg-subtle);
   }
   ul {
     list-style: none;
     margin: 0;
-    padding: 4px;
-    max-height: min(420px, 60vh);
+    padding: 6px;
+    max-height: min(440px, 60vh);
     overflow-y: auto;
   }
   li {
+    position: relative;
     display: flex;
     align-items: baseline;
     gap: 10px;
-    padding: 6px 10px;
-    border-radius: 6px;
+    padding: 7px 12px;
+    border-radius: var(--r-m);
     cursor: pointer;
   }
   li.selected {
     background: var(--accent-soft);
+  }
+  li.selected::before {
+    content: '';
+    position: absolute;
+    inset-inline-start: 0;
+    top: 8px;
+    bottom: 8px;
+    width: 3px;
+    border-radius: 3px;
+    background: var(--accent);
   }
   .label {
     white-space: nowrap;

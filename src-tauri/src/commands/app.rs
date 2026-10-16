@@ -1,10 +1,10 @@
 use std::path::Path;
 use std::sync::atomic::Ordering;
 
-use daf_core::DafError;
 use daf_core::recent::RecentItem;
 use daf_core::session::LoadedSession;
 use daf_core::settings::Settings;
+use daf_core::{DafError, ErrorCode};
 use serde::Serialize;
 use tauri::{AppHandle, State, WebviewWindow};
 
@@ -18,6 +18,7 @@ type CmdResult<T> = Result<T, DafError>;
 #[serde(rename_all = "camelCase")]
 pub struct Startup {
     pub version: String,
+    pub homepage: Option<String>,
     pub platform: &'static str,
     pub locale: String,
     pub settings: Settings,
@@ -26,6 +27,8 @@ pub struct Startup {
     pub pending_open: Vec<OpenRequest>,
     pub recent: Vec<RecentItem>,
     pub portable: bool,
+    /// The window has a Mica backdrop, so the chrome can be see-through.
+    pub mica: bool,
 }
 
 #[tauri::command]
@@ -50,6 +53,7 @@ pub async fn app_ready(app: AppHandle, state: State<'_, AppState>) -> CmdResult<
     let pending_open = std::mem::take(&mut *state.pending_open.lock().unwrap());
     Ok(Startup {
         version: app.package_info().version.to_string(),
+        homepage: app.config().bundle.homepage.clone(),
         platform: std::env::consts::OS,
         locale: state.locale.clone(),
         settings,
@@ -58,6 +62,7 @@ pub async fn app_ready(app: AppHandle, state: State<'_, AppState>) -> CmdResult<
         pending_open,
         recent,
         portable: state.dirs.portable,
+        mica: crate::supports_mica(),
     })
 }
 
@@ -75,5 +80,33 @@ pub async fn app_shown(window: WebviewWindow, state: State<'_, AppState>) -> Cmd
 #[tauri::command]
 pub async fn app_quit_ready(app: AppHandle) -> CmdResult<()> {
     app.exit(0);
+    Ok(())
+}
+
+/// Open the project homepage from tauri.conf.json. The URL is fixed, so the UI cannot open arbitrary links.
+#[tauri::command]
+pub async fn app_open_homepage(app: AppHandle) -> CmdResult<()> {
+    use tauri_plugin_opener::OpenerExt;
+    let Some(url) = app.config().bundle.homepage.clone() else {
+        return Ok(());
+    };
+    app.opener()
+        .open_url(url, None::<&str>)
+        .map_err(|e| DafError::new(ErrorCode::Io, e.to_string()))
+}
+
+/// Where the title bar's maximize button is (CSS pixels), so Windows 11 can offer Snap Layouts
+/// over it. An empty rect turns the overlay off.
+#[tauri::command]
+#[allow(unused_variables)]
+pub async fn window_snap_rect(
+    window: WebviewWindow,
+    x: f64,
+    y: f64,
+    w: f64,
+    h: f64,
+) -> CmdResult<()> {
+    #[cfg(windows)]
+    crate::snap::place(&window, x, y, w, h);
     Ok(())
 }

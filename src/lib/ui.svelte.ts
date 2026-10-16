@@ -43,6 +43,7 @@ export interface Toast {
 class Ui {
   quickPick = $state<QuickPickSpec | null>(null);
   dialog = $state<DialogSpec | null>(null);
+  about = $state(false);
   toasts = $state<Toast[]>([]);
   private nextToast = 1;
 
@@ -69,6 +70,15 @@ class Ui {
         },
       };
     });
+  }
+
+  openAbout() {
+    this.about = true;
+  }
+
+  closeAbout() {
+    this.about = false;
+    requestAnimationFrame(() => document.querySelector<HTMLElement>('.cm-content')?.focus());
   }
 
   toast(text: string, kind: Toast['kind'] = 'info', ms = 3500) {

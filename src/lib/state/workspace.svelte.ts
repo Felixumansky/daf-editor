@@ -7,7 +7,7 @@
  *   list to session.json, so closing or killing Daf never loses work.
  */
 import { EditorView, type ViewUpdate } from '@codemirror/view';
-import { EditorSelection, EditorState, Text, type Extension, type StateEffect } from '@codemirror/state';
+import { EditorSelection, EditorState, Text, type ChangeSet, type Extension, type StateEffect } from '@codemirror/state';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 
 import {
@@ -22,6 +22,14 @@ import { bidiControls } from '$lib/editor/rtl/bidiControls';
 import { cmPhrasesHe } from '$lib/i18n/cmPhrases';
 import { i18n, t } from '$lib/i18n/index.svelte';
 import { ui } from '$lib/ui.svelte';
+import { selectionStats, type SelectionStats } from '$lib/text/hebrewStats';
+import { keepsDirectionMarks } from '$lib/text/clean';
+import { configureHebrewSearch } from '$lib/editor/searchPanel';
+import { configureCleanPaste } from '$lib/editor/cleanPaste';
+import { configureImages } from '$lib/editor/images';
+
+/** Selection statistics (words, Σ, gematria) are skipped for bigger selections. */
+const MAX_STATS_CHARS = 200_000;
 
 export interface Tab {
   docId: string;
@@ -65,6 +73,8 @@ export const DEFAULT_SETTINGS: Settings = {
   'editor.rtl.autoDirection': true,
   'editor.rtl.codeComments': 'isolate',
   'editor.bidiControls': 'highlight',
+  'editor.cleanPaste': true,
+  'search.ignoreNiqqud': true,
   'files.defaultEncoding': 'utf-8',
   'files.encodingHint': 'il',
   'files.defaultEol': 'auto',
@@ -103,10 +113,19 @@ class Workspace {
   tabs = $state<Tab[]>([]);
   activeId = $state<string | null>(null);
   settings = $state<Settings>({ ...DEFAULT_SETTINGS });
-  cursor = $state({ line: 1, col: 1, selected: 0, cursors: 1 });
+  cursor = $state<{ line: number; col: number; selected: number; cursors: number; stats: SelectionStats | null }>({
+    line: 1, col: 1, selected: 0, cursors: 1, stats: null,
+  });
+  /** Markdown preview pane is open (shown while the active tab is Markdown). */
+  mdPreview = $state(false);
+  /** Bumped on every edit of the active document, for views that mirror its text. */
+  docTick = $state(0);
   recent = $state<RecentItem[]>([]);
   version = $state('');
+  homepage = $state<string | null>(null);
   platform = $state('windows');
+  /** The window has a Mica backdrop (Windows 11), so the chrome is see-through. */
+  mica = $state(false);
   ready = $state(false);
   /** Effective theme after resolving "auto". */
   theme = $state<'light' | 'dark'>('light');
@@ -153,7 +172,10 @@ class Workspace {
     this.initStarted = true;
     const s = await api.appReady();
     this.version = s.version;
+    this.homepage = s.homepage;
     this.platform = s.platform;
+    this.mica = s.mica;
+    document.documentElement.dataset.mica = s.mica ? 'on' : 'off';
     this.locale = s.locale;
     this.recent = s.recent;
     this.applySettings(s.settings);
@@ -197,6 +219,8 @@ class Workspace {
         this.viewMeta.set(tm.docId, { sel: tm.sel, scrollLine: tm.scrollLine });
         this.tabs.push(tab);
       }
+      // Pinned tabs always lead (stable, so a damaged session cannot interleave the groups).
+      this.tabs.sort((a, b) => Number(b.pinned) - Number(a.pinned));
       if (this.tabs.length) ui.toast(t('toast.restored', { n: this.tabs.length }));
     }
 
@@ -312,6 +336,10 @@ class Workspace {
     const dark = s['ui.theme'] === 'dark' || (s['ui.theme'] === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches);
     this.theme = dark ? 'dark' : 'light';
     document.documentElement.dataset.theme = this.theme;
+    // Mica and the native window shadow follow the window theme; "auto" leaves it to the OS.
+    void getCurrentWindow()
+      .setTheme(s['ui.theme'] === 'auto' ? null : this.theme)
+      .catch(() => {});
     const root = document.documentElement.style;
     root.setProperty('--ed-font', s['editor.fontFamily']);
     root.setProperty('--ed-font-size', `${(s['editor.fontSize'] * (1 + s['editor.zoom'] * 0.1)).toFixed(1)}px`);
@@ -325,6 +353,7 @@ class Workspace {
           effects.push(comps.indent.reconfigure(ext.indent(s['editor.tabSize'], s['editor.insertSpaces'])));
         if (prev['editor.showWhitespace'] !== s['editor.showWhitespace']) effects.push(comps.whitespace.reconfigure(ext.whitespace(s['editor.showWhitespace'])));
         if (prev['editor.bidiControls'] !== s['editor.bidiControls']) effects.push(comps.bidi.reconfigure(bidiControls(s['editor.bidiControls'])));
+        if (prev['editor.cleanPaste'] !== s['editor.cleanPaste']) effects.push(comps.cleanPaste.reconfigure(ext.cleanPaste(this.cleanPasteOn(tab))));
         effects.push(comps.direction.reconfigure(directionExtension(this.directionMode(tab))));
         effects.push(comps.isolates.reconfigure(ext.isolates(this.isolatesOn(tab))));
         return effects;
@@ -350,6 +379,10 @@ class Workspace {
     return this.settings['editor.rtl.autoDirection'] ? 'auto' : 'ltr';
   }
 
+  private cleanPasteOn(tab: Tab): boolean {
+    return this.settings['editor.cleanPaste'] && !keepsDirectionMarks(tab.path ?? tab.name);
+  }
+
   private isolatesOn(tab: Tab): boolean {
     return this.settings['editor.rtl.codeComments'] === 'isolate' && this.directionMode(tab) === 'code';
   }
@@ -367,7 +400,9 @@ class Workspace {
       readonly: tab.readonly && tab.docKind === 'binary',
       phrases: this.phrases(),
       bidi: s['editor.bidiControls'],
+      cleanPaste: this.cleanPasteOn(tab),
       large: tab.docKind === 'large',
+      docId: tab.docId,
     };
   }
 
@@ -488,12 +523,8 @@ class Workspace {
     const tab = this.tab(id);
     if (!tab || !id) return;
     if (u.docChanged) {
-      const dirty = tab.formatDirty || !sameText(u.state.doc, this.saved.get(id));
-      if (tab.dirty !== dirty) {
-        tab.dirty = dirty;
-        this.scheduleMeta();
-      }
-      this.scheduleBuffer(id);
+      this.docChanged(tab, u.state.doc);
+      if (this.mdPreview) this.docTick++;
     }
     if (u.docChanged || u.selectionSet) {
       this.updateCursor(u.state);
@@ -501,11 +532,50 @@ class Workspace {
     }
   }
 
+  private docChanged(tab: Tab, doc: Text) {
+    const dirty = tab.formatDirty || !sameText(doc, this.saved.get(tab.docId));
+    if (tab.dirty !== dirty) {
+      tab.dirty = dirty;
+      this.scheduleMeta();
+    }
+    this.scheduleBuffer(tab.docId);
+  }
+
+  /** Whether a tab's whole text is in memory (huge and binary files cannot be compared). */
+  canCompare(tab: Tab | undefined): tab is Tab {
+    return !!tab && (tab.docKind === 'text' || tab.docKind === 'large');
+  }
+
+  /** A tab's current text, loading it without activating the tab. */
+  async textOf(id: string): Promise<string> {
+    const tab = this.tab(id);
+    if (!tab) throw new Error(`no tab ${id}`);
+    return (await this.ensureState(tab)).doc.toString();
+  }
+
+  /** Apply edits made elsewhere (the compare view) to a tab, keeping its undo history and dirty state. */
+  applyChanges(id: string, changes: ChangeSet) {
+    const tab = this.tab(id);
+    const st = this.stateOf(id);
+    if (!tab || !st || changes.empty) return;
+    if (id === this.activeId && this.view) {
+      this.view.dispatch({ changes });
+      return;
+    }
+    const next = st.update({ changes }).state;
+    this.states.set(id, next);
+    this.docChanged(tab, next.doc);
+  }
+
   private updateCursor(st: EditorState) {
     const main = st.selection.main;
     const line = st.doc.lineAt(main.head);
     const selected = st.selection.ranges.reduce((n, r) => n + (r.to - r.from), 0);
-    this.cursor = { line: line.number, col: main.head - line.from + 1, selected, cursors: st.selection.ranges.length };
+    let stats: SelectionStats | null = null;
+    if (selected > 0 && selected <= MAX_STATS_CHARS) {
+      stats = selectionStats(st.selection.ranges.map((r) => st.sliceDoc(r.from, r.to)).join('\n'));
+    }
+    this.cursor = { line: line.number, col: main.head - line.from + 1, selected, cursors: st.selection.ranges.length, stats };
   }
 
   goTo(line: number, col = 1) {
@@ -750,9 +820,10 @@ class Workspace {
     this.scheduleMeta();
   }
 
+  /** Close every tab except `exceptId` and pinned tabs. */
   async closeAll(exceptId?: string) {
     for (const tab of [...this.tabs]) {
-      if (tab.docId === exceptId) continue;
+      if (tab.docId === exceptId || tab.pinned) continue;
       if (!(await this.close(tab.docId))) return;
     }
   }
@@ -773,10 +844,33 @@ class Workspace {
     void this.activate(next.docId);
   }
 
+  /** Number of pinned tabs; they always occupy the first slots. */
+  get pinnedCount(): number {
+    let n = 0;
+    while (n < this.tabs.length && this.tabs[n].pinned) n++;
+    return n;
+  }
+
+  /** Move a tab, staying within its group (pinned tabs before the others). */
   moveTab(from: number, to: number) {
-    if (from === to || from < 0 || to < 0 || from >= this.tabs.length || to >= this.tabs.length) return;
-    const [tab] = this.tabs.splice(from, 1);
+    const tab = this.tabs[from];
+    if (!tab) return;
+    const pinned = this.pinnedCount;
+    const [lo, hi] = tab.pinned ? [0, pinned - 1] : [pinned, this.tabs.length - 1];
+    to = Math.max(lo, Math.min(hi, to));
+    if (from === to) return;
+    this.tabs.splice(from, 1);
     this.tabs.splice(to, 0, tab);
+    this.scheduleMeta();
+  }
+
+  /** Pin or unpin a tab. It lands at the boundary between the groups: last pinned, or first unpinned. */
+  togglePin(id: string | null = this.activeId) {
+    const index = this.tabs.findIndex((t) => t.docId === id);
+    if (index < 0) return;
+    const [tab] = this.tabs.splice(index, 1);
+    tab.pinned = !tab.pinned;
+    this.tabs.splice(this.pinnedCount, 0, tab);
     this.scheduleMeta();
   }
 
@@ -1039,3 +1133,20 @@ class Workspace {
 }
 
 export const ws = new Workspace();
+
+configureHebrewSearch({
+  get: () => ws.settings['search.ignoreNiqqud'],
+  set: (on) => void ws.updateSettings({ 'search.ignoreNiqqud': on }),
+});
+configureCleanPaste((n) => ui.toast(t('toast.pasteCleaned', { n })));
+configureImages({
+  ensurePath: async (docId) => {
+    const tab = ws.tabs.find((x) => x.docId === docId);
+    if (!tab) return false;
+    if (tab.path) return true;
+    ui.toast(t('toast.imageSaveFirst'));
+    return ws.saveAs(docId);
+  },
+  error: (message) => ui.toast(t('toast.imageFailed', { message }), 'error', 6000),
+  missing: (src) => t('image.missing', { src }),
+});

@@ -190,7 +190,54 @@ pub async fn file_read_text(state: State<'_, AppState>, doc_id: String) -> CmdRe
     Ok(Response::new(text.into_bytes()))
 }
 
-fn header<'a>(request: &'a Request<'_>, name: &str) -> Option<&'a str> {
+/// The file's current contents on disk, without touching the open document (its fingerprint
+/// still drives "changed on disk" detection).
+#[tauri::command]
+pub async fn file_peek_disk(state: State<'_, AppState>, doc_id: String) -> CmdResult<Response> {
+    let (path, enc) = state.with_doc(&doc_id, |e| (e.path.clone(), e.encoding))?;
+    let Some(path) = path else {
+        return Err(DafError::new(
+            ErrorCode::NotFound,
+            "the document has no file",
+        ));
+    };
+    let doc = fsio::read_doc(&path, &state.read_options(Some(enc), true))?;
+    Ok(Response::new(doc.text.into_bytes()))
+}
+
+#[derive(Debug, Serialize)]
+pub struct PickedText {
+    pub path: String,
+    pub name: String,
+    pub text: String,
+}
+
+/// Pick one file and return its text without opening it as a document (used by Compare).
+#[tauri::command]
+pub async fn file_pick_text(
+    app: AppHandle,
+    state: State<'_, AppState>,
+) -> CmdResult<Option<PickedText>> {
+    let Some(picked) = app.dialog().file().blocking_pick_file() else {
+        return Ok(None);
+    };
+    let path = picked
+        .into_path()
+        .map_err(|e| DafError::new(ErrorCode::Invalid, e.to_string()))?;
+    state.grants.grant(&path);
+    let doc = fsio::read_doc(&path, &state.read_options(None, false))?;
+    let name = path
+        .file_name()
+        .map(|n| n.to_string_lossy().into_owned())
+        .unwrap_or_default();
+    Ok(Some(PickedText {
+        path: path.to_string_lossy().into_owned(),
+        name,
+        text: doc.text,
+    }))
+}
+
+pub(super) fn header<'a>(request: &'a Request<'_>, name: &str) -> Option<&'a str> {
     request.headers().get(name).and_then(|v| v.to_str().ok())
 }
 

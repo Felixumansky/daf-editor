@@ -73,7 +73,7 @@ export const ENCODINGS: EncodingChoice[] = [
   { label: 'EUC-KR', encoding: 'EUC-KR', desc: 'Korean' },
 ];
 
-function filterItems(items: QuickPickItem[], q: string, extra: (i: QuickPickItem) => string[] = () => []) {
+export function filterItems(items: QuickPickItem[], q: string, extra: (i: QuickPickItem) => string[] = () => []) {
   if (!q.trim()) return items;
   return items
     .map((i) => ({ i, s: bestScore(q, [i.label, i.detail ?? '', ...extra(i)]) }))

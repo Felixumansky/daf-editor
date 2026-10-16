@@ -4,6 +4,8 @@ mod cli;
 mod commands;
 mod events;
 mod grants;
+#[cfg(windows)]
+mod snap;
 mod state;
 
 use std::path::Path;
@@ -20,6 +22,19 @@ use crate::state::AppState;
 const FLUSH_TIMEOUT: Duration = Duration::from_millis(1500);
 /// If the UI never reports its first paint (e.g. a script error), show the window anyway.
 const SHOW_FALLBACK: Duration = Duration::from_secs(3);
+
+/// Mica needs Windows 11 (build 22000+). Elsewhere the window stays transparent-capable but the
+/// UI paints solid chrome, so there are never see-through holes.
+pub(crate) fn supports_mica() -> bool {
+    #[cfg(windows)]
+    {
+        windows_version::OsVersion::current().build >= 22000
+    }
+    #[cfg(not(windows))]
+    {
+        false
+    }
+}
 
 fn deliver_open(app: &tauri::AppHandle, reqs: Vec<OpenRequest>) {
     if reqs.is_empty() {
@@ -108,6 +123,16 @@ pub fn run() {
             let launch_at_login = app.state::<AppState>().settings().launch_at_login;
             sync_autostart(app.handle(), launch_at_login);
 
+            // Mica Alt ("tabbed"), as in Windows Terminal: tinted by the wallpaper, made for tab strips.
+            if supports_mica()
+                && let Some(w) = app.get_webview_window("main")
+            {
+                use tauri::window::{Effect, EffectsBuilder};
+                if let Err(e) = w.set_effects(EffectsBuilder::new().effect(Effect::Tabbed).build()) {
+                    tracing::warn!("could not apply Mica: {e}");
+                }
+            }
+
             let handle = app.handle().clone();
             std::thread::spawn(move || {
                 std::thread::sleep(SHOW_FALLBACK);
@@ -150,11 +175,15 @@ pub fn run() {
             commands::app::app_ready,
             commands::app::app_shown,
             commands::app::app_quit_ready,
+            commands::app::app_open_homepage,
+            commands::app::window_snap_rect,
             commands::file::file_new,
             commands::file::file_open_dialog,
             commands::file::file_open_paths,
             commands::file::file_open_binary,
             commands::file::file_read_text,
+            commands::file::file_peek_disk,
+            commands::file::file_pick_text,
             commands::file::file_save,
             commands::file::file_save_as,
             commands::file::file_reopen,
@@ -164,6 +193,8 @@ pub fn run() {
             commands::file::file_close,
             commands::file::file_reveal,
             commands::file::doc_restore,
+            commands::image::image_save,
+            commands::image::image_read,
             commands::session::session_put_meta,
             commands::session::session_put_buffer,
             commands::session::session_get_buffer,

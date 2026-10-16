@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-file-peek-disk"
+description = "Enables the file_peek_disk command without any pre-configured scope."
+commands.allow = ["file_peek_disk"]
+
+[[permission]]
+identifier = "deny-file-peek-disk"
+description = "Denies the file_peek_disk command without any pre-configured scope."
+commands.deny = ["file_peek_disk"]

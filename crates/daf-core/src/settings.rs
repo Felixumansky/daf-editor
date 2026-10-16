@@ -43,6 +43,12 @@ pub struct Settings {
     /// "highlight" | "off": flag invisible bidi control characters (Trojan Source).
     #[serde(rename = "editor.bidiControls")]
     pub bidi_controls: String,
+    /// Strip invisible direction marks and zero-width characters from pasted text.
+    #[serde(rename = "editor.cleanPaste")]
+    pub clean_paste: bool,
+    /// In-file search ignores niqqud and final-letter forms.
+    #[serde(rename = "search.ignoreNiqqud")]
+    pub search_ignore_niqqud: bool,
     /// Encoding for new files and for pure-ASCII files.
     #[serde(rename = "files.defaultEncoding")]
     pub default_encoding: String,
@@ -79,8 +85,9 @@ impl Default for Settings {
         Self {
             ui_language: "en".into(),
             ui_theme: "auto".into(),
+            // The two Plex faces ship with the app: the Hebrew one is drawn to match the mono Latin.
             font_family:
-                "Cascadia Mono, Consolas, 'DejaVu Sans Mono', 'Noto Sans Hebrew', monospace".into(),
+                "'IBM Plex Mono', 'IBM Plex Sans Hebrew', Cascadia Mono, Consolas, monospace".into(),
             font_size: 14.0,
             zoom: 0,
             word_wrap: false,
@@ -91,6 +98,8 @@ impl Default for Settings {
             rtl_auto_direction: true,
             rtl_code_comments: "isolate".into(),
             bidi_controls: "highlight".into(),
+            clean_paste: true,
+            search_ignore_niqqud: true,
             default_encoding: "utf-8".into(),
             encoding_hint: "il".into(),
             default_eol: "auto".into(),

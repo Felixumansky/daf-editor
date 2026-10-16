@@ -84,6 +84,8 @@ export interface Settings {
   'editor.rtl.autoDirection': boolean;
   'editor.rtl.codeComments': 'isolate' | 'off';
   'editor.bidiControls': 'highlight' | 'off';
+  'editor.cleanPaste': boolean;
+  'search.ignoreNiqqud': boolean;
   'files.defaultEncoding': string;
   'files.encodingHint': string;
   'files.defaultEol': 'auto' | 'lf' | 'crlf';
@@ -137,6 +139,7 @@ export interface RecentItem {
 
 export interface Startup {
   version: string;
+  homepage: string | null;
   platform: string;
   locale: string;
   settings: Settings;
@@ -145,12 +148,20 @@ export interface Startup {
   pendingOpen: OpenRequest[];
   recent: RecentItem[];
   portable: boolean;
+  /** Windows 11 Mica backdrop is on: the chrome may be see-through. */
+  mica: boolean;
 }
 
 export interface RestoreResult {
   meta: DocMeta;
   diskChanged: boolean;
   missing: boolean;
+}
+
+export interface PickedText {
+  path: string;
+  name: string;
+  text: string;
 }
 
 export interface DiskStatus {
@@ -171,12 +182,17 @@ export const api = {
   appReady: () => invoke<Startup>('app_ready'),
   appShown: () => invoke<void>('app_shown'),
   appQuitReady: () => invoke<void>('app_quit_ready'),
+  appOpenHomepage: () => invoke<void>('app_open_homepage'),
+  /** Tell Windows where the title bar's maximize button is (for Snap Layouts). Zero size hides it. */
+  windowSnapRect: (r: { x: number; y: number; w: number; h: number }) => invoke<void>('window_snap_rect', r),
 
   fileNew: () => invoke<DocMeta>('file_new'),
   fileOpenDialog: () => invoke<OpenResult[]>('file_open_dialog'),
   fileOpenPaths: (reqs: OpenRequest[]) => invoke<OpenResult[]>('file_open_paths', { reqs }),
   fileOpenBinary: (path: string) => invoke<DocMeta>('file_open_binary', { path }),
   fileReadText: async (docId: string) => bytesToText(await invoke<ArrayBuffer>('file_read_text', { docId })),
+  filePeekDisk: async (docId: string) => bytesToText(await invoke<ArrayBuffer>('file_peek_disk', { docId })),
+  filePickText: () => invoke<PickedText | null>('file_pick_text'),
   fileSave: (docId: string, text: string, force = false) =>
     invoke<SaveResult>('file_save', encoder.encode(text), {
       headers: { 'x-daf-doc-id': docId, 'x-daf-force': force ? '1' : '0' },
@@ -193,6 +209,12 @@ export const api = {
   fileClose: (docId: string) => invoke<void>('file_close', { docId }),
   fileReveal: (docId: string) => invoke<void>('file_reveal', { docId }),
   docRestore: (tab: TabMeta) => invoke<RestoreResult>('doc_restore', { tab }),
+
+  /** Write an image into the document's `<stem>.assets/` folder; returns the link to insert. */
+  imageSave: (docId: string, bytes: Uint8Array, name: string) =>
+    invoke<{ link: string }>('image_save', bytes, { headers: { 'x-daf-doc-id': docId, 'x-daf-name': name } }),
+  /** An image the document links to, resolved inside the document's folder. */
+  imageRead: (docId: string, src: string) => invoke<ArrayBuffer>('image_read', { docId, src }),
 
   sessionPutMeta: (meta: SessionMeta) => invoke<void>('session_put_meta', { meta }),
   sessionPutBuffer: (docId: string, text: string) =>

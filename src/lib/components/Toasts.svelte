@@ -4,15 +4,15 @@
 
 <div class="toasts" role="status" aria-live="polite">
   {#each ui.toasts as toast (toast.id)}
-    <div class="toast" class:error={toast.kind === 'error'} dir="auto">{toast.text}</div>
+    <div class="toast glass" class:error={toast.kind === 'error'} dir="auto">{toast.text}</div>
   {/each}
 </div>
 
 <style>
   .toasts {
     position: fixed;
-    inset-block-end: 36px;
-    inset-inline-end: 16px;
+    inset-block-end: 44px;
+    inset-inline-end: 20px;
     z-index: 70;
     display: flex;
     flex-direction: column;
@@ -20,16 +20,30 @@
     pointer-events: none;
   }
   .toast {
+    position: relative;
     max-width: 420px;
-    padding: 9px 14px;
-    background: var(--surface-1);
-    border: 1px solid var(--border);
-    border-inline-start: 3px solid var(--accent);
-    border-radius: 8px;
-    box-shadow: var(--shadow);
-    line-height: 1.4;
+    padding: 10px 16px 10px 20px;
+    border-radius: var(--r-l);
+    line-height: 1.45;
+    animation: toast-in var(--dur-3) var(--ease-spring);
   }
-  .toast.error {
-    border-inline-start-color: var(--danger);
+  .toast::before {
+    content: '';
+    position: absolute;
+    inset-inline-start: 8px;
+    top: 10px;
+    bottom: 10px;
+    width: 3px;
+    border-radius: 3px;
+    background: var(--brand-grad);
+  }
+  .toast.error::before {
+    background: var(--danger);
+  }
+  @keyframes toast-in {
+    from {
+      opacity: 0;
+      transform: translateY(10px) scale(0.96);
+    }
   }
 </style>

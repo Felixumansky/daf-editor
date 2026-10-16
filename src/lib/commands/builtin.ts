@@ -14,6 +14,10 @@ import { ws } from '$lib/state/workspace.svelte';
 import { ui } from '$lib/ui.svelte';
 import { i18n, t } from '$lib/i18n/index.svelte';
 import { api } from '$lib/ipc/api';
+import { compare } from '$lib/diff/compare.svelte';
+import { fixLayout, wrongLayoutRunStart } from '$lib/text/layout';
+import { MARKS } from '$lib/text/hebrewSearch';
+import { CalcError, evaluate, formatResult } from '$lib/text/calc';
 
 /** Run a CodeMirror command on the active editor. */
 const cm = (fn: (v: EditorView) => boolean) => () => {
@@ -110,16 +114,110 @@ function openReplace(view: EditorView): boolean {
   return true;
 }
 
-async function paste() {
+/** `raw`: skip the clean-paste pass (which listens for the "input.paste" user event). */
+async function paste(raw = false) {
   const v = ws.view;
   if (!v) return;
   try {
     const text = await navigator.clipboard.readText();
-    v.dispatch(v.state.replaceSelection(text));
+    v.dispatch({ ...v.state.replaceSelection(text), userEvent: raw ? 'input.pasteRaw' : 'input.paste', scrollIntoView: true });
   } catch {
     document.execCommand('paste');
   }
   v.focus();
+}
+
+/** Fix text typed in the wrong keyboard layout: the selection, or the run typed just before the cursor. */
+function fixKeyboardLayout(view: EditorView): boolean {
+  const st = view.state;
+  view.dispatch(
+    st.changeByRange((r) => {
+      let { from } = r;
+      if (r.empty) {
+        const line = st.doc.lineAt(r.head);
+        from = line.from + wrongLayoutRunStart(line.text, r.head - line.from);
+      }
+      if (from === r.to) return { range: r };
+      const out = fixLayout(st.sliceDoc(from, r.to));
+      return { changes: { from, to: r.to, insert: out }, range: EditorSelection.range(from, from + out.length) };
+    }),
+  );
+  return true;
+}
+
+const MARKS_RUN = new RegExp(`[${MARKS}]+`, 'gu');
+
+/** Remove niqqud and cantillation from the selection, or from the whole document. */
+function removeNiqqud(view: EditorView): boolean {
+  const st = view.state;
+  const ranges = st.selection.ranges.every((r) => r.empty) ? [{ from: 0, to: st.doc.length }] : st.selection.ranges;
+  const changes: ChangeSpec[] = [];
+  for (const r of ranges) {
+    for (const m of st.sliceDoc(r.from, r.to).matchAll(MARKS_RUN)) {
+      changes.push({ from: r.from + m.index, to: r.from + m.index + m[0].length });
+    }
+  }
+  if (changes.length) view.dispatch({ changes, userEvent: 'delete.niqqud' });
+  return true;
+}
+
+/** The arithmetic right before a trailing "=" on a line: "total 12*3+4 =" → "12*3+4". */
+const EXPR_BEFORE_EQ = /([\d.,+\-*/%^()×÷−–\s]*\d[\d.,+\-*/%^()×÷−–\s]*)=\s*$/;
+
+/**
+ * Calculate: a selection is replaced by its result, or gets the result after a trailing "=".
+ * With no selection, a line ending in "=" gets the result appended.
+ */
+function evaluateSelection(view: EditorView): boolean {
+  const st = view.state;
+  const changes: ChangeSpec[] = [];
+  /** Each result ends where `end` maps to (with forward association). */
+  const results: { end: number; len: number }[] = [];
+  try {
+    for (const r of st.selection.ranges) {
+      const text = r.empty ? st.doc.lineAt(r.head).text : st.sliceDoc(r.from, r.to);
+      const m = EXPR_BEFORE_EQ.exec(text);
+      if (r.empty && !m) continue;
+      const result = formatResult(evaluate(m ? m[1] : text));
+      if (m) {
+        const at = r.empty ? st.doc.lineAt(r.head).to : r.to;
+        changes.push({ from: at, insert: /\s$/.test(text) ? result : ' ' + result });
+        results.push({ end: at, len: result.length });
+      } else {
+        changes.push({ from: r.from, to: r.to, insert: result });
+        results.push({ end: r.to, len: result.length });
+      }
+    }
+  } catch (e) {
+    if (!(e instanceof CalcError)) throw e;
+    ui.toast(t('toast.calcInvalid', { message: e.message }), 'error');
+    return true;
+  }
+  if (!changes.length) {
+    ui.toast(t('toast.calcNothing'));
+    return true;
+  }
+  const changeSet = st.changes(changes);
+  view.dispatch({
+    changes: changeSet,
+    selection: EditorSelection.create(
+      results.map(({ end, len }) => {
+        const to = changeSet.mapPos(end, 1);
+        return EditorSelection.range(to - len, to);
+      }),
+    ),
+    userEvent: 'input.calc',
+  });
+  return true;
+}
+
+function toggleMarkdownPreview() {
+  if (!ws.mdPreview && ws.active?.lang !== 'markdown') {
+    ui.toast(t('toast.notMarkdown'));
+    return;
+  }
+  ws.mdPreview = !ws.mdPreview;
+  ws.view?.focus();
 }
 
 const execCmd = (name: 'cut' | 'copy') => () => {
@@ -148,7 +246,19 @@ export function registerBuiltinCommands() {
     { id: 'file.saveAll', category: 'file', title: T('שמור הכל', 'Save All'), keywords: ['save all'], menu: true, group: 'save', run: () => ws.saveAll() },
     { id: 'file.reload', category: 'file', title: T('טען מחדש מהדיסק', 'Reload from Disk'), keywords: ['revert', 'refresh'], menu: true, group: 'save', enabled: () => ws.active?.kind === 'file', run: () => ws.reloadFromDisk() },
     { id: 'file.reveal', category: 'file', title: T('הצג בתיקייה', 'Reveal in File Explorer'), keywords: ['explorer', 'folder', 'finder', 'סייר'], menu: true, group: 'save', enabled: () => ws.active?.kind === 'file', run: () => ws.revealActive() },
+    { id: 'compare.withTab', category: 'file', title: T('השווה עם טאב…', 'Compare with Tab…'), keywords: ['compare', 'diff', 'השוואה', 'הבדלים'], menu: true, group: 'compare', enabled: () => ws.canCompare(ws.active) && ws.tabs.length > 1, run: () => compare.pickTab() },
+    { id: 'compare.withSaved', category: 'file', title: T('השווה עם הגרסה השמורה', 'Compare with Saved Version'), keywords: ['compare', 'diff', 'changes', 'השוואה', 'שינויים'], menu: true, group: 'compare', enabled: () => ws.canCompare(ws.active) && ws.active.kind === 'file', run: () => compare.withSaved() },
+    { id: 'compare.withClipboard', category: 'file', title: T('השווה עם הלוח', 'Compare with Clipboard'), keywords: ['compare', 'diff', 'clipboard', 'השוואה', 'לוח'], menu: true, group: 'compare', enabled: () => ws.canCompare(ws.active), run: () => compare.withClipboard() },
+    { id: 'compare.withFile', category: 'file', title: T('השווה עם קובץ…', 'Compare with File…'), keywords: ['compare', 'diff', 'השוואה'], menu: true, group: 'compare', enabled: () => ws.canCompare(ws.active), run: () => compare.withFile() },
+    { id: 'compare.next', category: 'view', title: T('השוואה: השינוי הבא', 'Compare: Next Change'), keywords: ['diff'], enabled: () => compare.open, run: () => compare.controller?.next() },
+    { id: 'compare.prev', category: 'view', title: T('השוואה: השינוי הקודם', 'Compare: Previous Change'), keywords: ['diff'], enabled: () => compare.open, run: () => compare.controller?.prev() },
+    { id: 'compare.copyToRight', category: 'view', title: T('השוואה: העתק שינוי לימין', 'Compare: Copy Change to Right'), keywords: ['diff', 'merge', 'מיזוג'], enabled: () => compare.open, run: () => compare.controller?.copy('right') },
+    { id: 'compare.copyToLeft', category: 'view', title: T('השוואה: העתק שינוי לשמאל', 'Compare: Copy Change to Left'), keywords: ['diff', 'merge', 'מיזוג'], enabled: () => compare.open, run: () => compare.controller?.copy('left') },
+    { id: 'compare.swap', category: 'view', title: T('השוואה: החלף צדדים', 'Compare: Swap Sides'), keywords: ['diff'], enabled: () => compare.open, run: () => compare.swap() },
+    { id: 'compare.toggleLayout', category: 'view', title: T('השוואה: זה לצד זה / מאוחד', 'Compare: Side by Side / Inline'), keywords: ['diff', 'unified', 'split'], enabled: () => compare.open, run: () => compare.setMode(compare.mode === 'split' ? 'unified' : 'split') },
+    { id: 'compare.close', category: 'view', title: T('סגור השוואה', 'Close Compare'), keywords: ['diff'], enabled: () => compare.open, run: () => compare.close() },
     { id: 'file.close', category: 'file', title: T('סגור טאב', 'Close Tab'), keywords: ['close'], menu: true, group: 'close', run: () => ws.close() },
+    { id: 'file.pinTab', category: 'file', title: T('הצמד טאב', 'Pin Tab'), keywords: ['pin', 'unpin', 'נעץ', 'נעיצה', 'הצמדה'], menu: true, group: 'close', checked: () => !!ws.active?.pinned, run: () => ws.togglePin() },
     { id: 'file.closeOthers', category: 'file', title: T('סגור את כל השאר', 'Close Other Tabs'), menu: true, group: 'close', run: () => ws.closeAll(ws.activeId ?? undefined) },
     { id: 'file.closeAll', category: 'file', title: T('סגור הכל', 'Close All Tabs'), menu: true, group: 'close', run: () => ws.closeAll() },
     { id: 'file.clearRecent', category: 'file', title: T('נקה רשימת קבצים אחרונים', 'Clear Recent Files'), run: async () => { await api.recentClear(); ws.recent = []; } },
@@ -165,7 +275,8 @@ export function registerBuiltinCommands() {
     editorCmd({ id: 'edit.redo', title: T('בצע שוב', 'Redo'), group: 'undo', run: cm(redo) }),
     editorCmd({ id: 'edit.cut', title: T('גזור', 'Cut'), group: 'clip', run: execCmd('cut') }),
     editorCmd({ id: 'edit.copy', title: T('העתק', 'Copy'), group: 'clip', run: execCmd('copy') }),
-    editorCmd({ id: 'edit.paste', title: T('הדבק', 'Paste'), group: 'clip', run: paste }),
+    editorCmd({ id: 'edit.paste', title: T('הדבק', 'Paste'), group: 'clip', run: () => paste() }),
+    editorCmd({ id: 'edit.pasteRaw', title: T('הדבק כמו שהוא (בלי ניקוי)', 'Paste As-Is (No Cleanup)'), keywords: ['paste raw', 'rlm', 'lrm', 'הדבקה', 'כיווניות'], group: 'clip', run: () => paste(true) }),
     editorCmd({ id: 'edit.selectAll', title: T('בחר הכל', 'Select All'), group: 'clip', run: cm(selectAll) }),
     editorCmd({ id: 'edit.duplicateLine', title: T('שכפל שורה', 'Duplicate Line'), keywords: ['copy line'], group: 'line', run: cm(copyLineDown) }),
     editorCmd({ id: 'edit.deleteLine', title: T('מחק שורה', 'Delete Line'), group: 'line', run: cm(deleteLine) }),
@@ -182,6 +293,9 @@ export function registerBuiltinCommands() {
     editorCmd({ id: 'edit.sortAsc', title: T('מיין שורות (עולה)', 'Sort Lines Ascending'), keywords: ['sort'], group: 'lines', run: cm((v) => sortLines(v, false)) }),
     editorCmd({ id: 'edit.sortDesc', title: T('מיין שורות (יורד)', 'Sort Lines Descending'), keywords: ['sort'], group: 'lines', run: cm((v) => sortLines(v, true)) }),
     editorCmd({ id: 'edit.dedupe', title: T('הסר שורות כפולות', 'Remove Duplicate Lines'), keywords: ['unique', 'duplicate'], group: 'lines', run: cm(removeDuplicateLines) }),
+    editorCmd({ id: 'edit.fixLayout', title: T('תקן שפת מקלדת (akuo ← שלום)', 'Fix Keyboard Layout (akuo → שלום)'), keywords: ['layout', 'keyboard', 'gibberish', 'wrong language', 'מקלדת', 'ג׳יבריש', 'שפה', 'akuo'], group: 'hebrew', run: cm(fixKeyboardLayout) }),
+    editorCmd({ id: 'edit.stripNiqqud', title: T('הסר ניקוד', 'Remove Niqqud'), keywords: ['niqqud', 'nikud', 'vowels', 'diacritics', 'ניקוד', 'טעמים'], group: 'hebrew', run: cm(removeNiqqud) }),
+    editorCmd({ id: 'edit.evaluate', title: T('חשב ביטוי (12*3= ← 36)', 'Calculate Expression (12*3= → 36)'), keywords: ['calc', 'calculator', 'math', 'evaluate', 'מחשבון', 'חישוב'], group: 'hebrew', run: cm(evaluateSelection) }),
     editorCmd({ id: 'edit.addNextOccurrence', title: T('הוסף סמן במופע הבא', 'Add Next Occurrence'), keywords: ['multi cursor', 'ריבוי סמנים'], group: 'multi', run: cm(selectNextOccurrence) }),
     editorCmd({ id: 'edit.selectAllOccurrences', title: T('בחר את כל המופעים', 'Select All Occurrences'), keywords: ['multi cursor'], group: 'multi', run: cm(selectSelectionMatches) }),
 
@@ -210,6 +324,7 @@ export function registerBuiltinCommands() {
     editorCmd({ id: 'view.unfoldAll', category: 'view', title: T('פתח הכל', 'Unfold All'), group: 'fold', run: cm(unfoldAll) }),
     editorCmd({ id: 'view.fold', category: 'view', title: T('קפל', 'Fold'), group: 'fold', menu: false, run: cm(foldCode) }),
     editorCmd({ id: 'view.unfold', category: 'view', title: T('פתח קיפול', 'Unfold'), group: 'fold', menu: false, run: cm(unfoldCode) }),
+    { id: 'view.markdownPreview', category: 'view', title: T('תצוגה מקדימה ל-Markdown', 'Markdown Preview'), keywords: ['markdown', 'md', 'preview', 'render', 'תצוגה'], menu: true, group: 'display', checked: () => ws.mdPreview, run: toggleMarkdownPreview },
     {
       id: 'view.theme', category: 'view', title: T('ערכת נושא: בהיר / כהה / אוטומטי', 'Theme: Light / Dark / Auto'), keywords: ['dark', 'light', 'כהה', 'בהיר'], menu: true, group: 'ui',
       run: () => {
@@ -238,6 +353,6 @@ export function registerBuiltinCommands() {
     { id: 'format.language', category: 'format', title: T('שפת תכנות…', 'Language Mode…'), keywords: ['syntax', 'highlight', 'צביעה'], menu: true, group: 'lang', run: pickLanguage },
 
     // ─── Help
-    { id: 'help.about', category: 'help', title: T('אודות דף', 'About Daf'), menu: true, run: () => ui.toast(t('about.text', { version: ws.version }), 'info', 6000) },
+    { id: 'help.about', category: 'help', title: T('אודות דף', 'About Daf'), menu: true, run: () => ui.openAbout() },
   );
 }

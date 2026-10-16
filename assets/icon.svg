@@ -1,36 +1,63 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
-  <!-- Daf ("page"): a sheet with a folded corner. Text lines are right-aligned, a nod to Hebrew. -->
+  <!-- Daf ("page"): a dark sheet with a folded corner. Text lines are right-aligned, a nod to Hebrew,
+       and the caret sits at the left end of the last line, where right-to-left typing continues. -->
   <defs>
-    <linearGradient id="paper" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#ffffff"/>
-      <stop offset="1" stop-color="#eaf0fa"/>
+    <linearGradient id="paper" x1="0.15" y1="0" x2="0.85" y2="1">
+      <stop offset="0" stop-color="#2b3550"/>
+      <stop offset="0.55" stop-color="#1a2034"/>
+      <stop offset="1" stop-color="#111522"/>
+    </linearGradient>
+    <linearGradient id="rim" x1="0" y1="0" x2="0.4" y2="1">
+      <stop offset="0" stop-color="#8fb0ff"/>
+      <stop offset="0.5" stop-color="#4a63a8"/>
+      <stop offset="1" stop-color="#2a3558"/>
     </linearGradient>
     <linearGradient id="fold" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#d6e2f6"/>
-      <stop offset="1" stop-color="#9fb6de"/>
+      <stop offset="0" stop-color="#5a6f9f"/>
+      <stop offset="1" stop-color="#34416a"/>
     </linearGradient>
     <linearGradient id="ink" x1="0" y1="0" x2="1" y2="0">
-      <stop offset="0" stop-color="#4f86f2"/>
-      <stop offset="1" stop-color="#2459d6"/>
+      <stop offset="0" stop-color="#4f7dff"/>
+      <stop offset="1" stop-color="#8fd0ff"/>
     </linearGradient>
+    <linearGradient id="caret" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffd27a"/>
+      <stop offset="1" stop-color="#ff9a3d"/>
+    </linearGradient>
+    <radialGradient id="sheen" cx="0.2" cy="0.05" r="0.75">
+      <stop offset="0" stop-color="#9fb8ff" stop-opacity="0.22"/>
+      <stop offset="1" stop-color="#9fb8ff" stop-opacity="0"/>
+    </radialGradient>
     <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
-      <feDropShadow dx="0" dy="18" stdDeviation="22" flood-color="#0b2a66" flood-opacity="0.28"/>
+      <feDropShadow dx="0" dy="20" stdDeviation="24" flood-color="#000000" flood-opacity="0.45"/>
+    </filter>
+    <filter id="glow" x="-30%" y="-60%" width="160%" height="220%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="14" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
     </filter>
   </defs>
 
   <!-- Page with the top-right corner folded. -->
-  <path filter="url(#shadow)"
+  <path id="page" filter="url(#shadow)"
         d="M262 72 H640 L852 284 V896 Q852 952 796 952 H262 Q206 952 206 896 V128 Q206 72 262 72 Z"
-        fill="url(#paper)" stroke="#2f6feb" stroke-width="22" stroke-linejoin="round"/>
+        fill="url(#paper)" stroke="url(#rim)" stroke-width="18" stroke-linejoin="round"/>
+  <path d="M262 72 H640 L852 284 V896 Q852 952 796 952 H262 Q206 952 206 896 V128 Q206 72 262 72 Z"
+        fill="url(#sheen)"/>
   <!-- The fold. -->
   <path d="M640 72 V232 Q640 284 692 284 H852 Z"
-        fill="url(#fold)" stroke="#2f6feb" stroke-width="22" stroke-linejoin="round"/>
+        fill="url(#fold)" stroke="url(#rim)" stroke-width="18" stroke-linejoin="round"/>
 
-  <!-- Lines of text, flush right. -->
-  <g fill="url(#ink)">
+  <!-- Lines of text, flush right, softly lit. -->
+  <g fill="url(#ink)" filter="url(#glow)">
     <rect x="330" y="396" width="414" height="58" rx="29"/>
     <rect x="454" y="510" width="290" height="58" rx="29"/>
     <rect x="300" y="624" width="444" height="58" rx="29"/>
     <rect x="514" y="738" width="230" height="58" rx="29"/>
   </g>
+
+  <!-- RTL caret. -->
+  <rect x="470" y="718" width="26" height="98" rx="13" fill="url(#caret)" filter="url(#glow)"/>
 </svg>

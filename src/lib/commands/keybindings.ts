@@ -124,6 +124,15 @@ const COMMON: Record<string, string[]> = {
   'edit.upperCase': ['Mod+Shift+U'],
   'edit.lowerCase': ['Mod+U'],
   'edit.joinLines': ['Mod+J'],
+  'edit.fixLayout': ['Mod+Alt+K'],
+  'edit.evaluate': ['Mod+Alt+='],
+  'edit.pasteRaw': ['Mod+Shift+V'],
+  'view.markdownPreview': ['Mod+Alt+P'],
+  'compare.withTab': ['Mod+Alt+C'],
+  'compare.next': ['F7'],
+  'compare.prev': ['Shift+F7'],
+  'compare.copyToRight': ['Alt+Shift+Right'],
+  'compare.copyToLeft': ['Alt+Shift+Left'],
 };
 
 const PRESETS: Record<Preset, Record<string, string[]>> = {

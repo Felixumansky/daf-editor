@@ -1,0 +1,29 @@
+name: Bug report
+description: Something in Daf doesn't work as it should
+labels: [bug]
+body:
+  - type: input
+    id: version
+    attributes:
+      label: Daf version
+      description: Help → About Daf
+      placeholder: 0.2.0
+    validations:
+      required: true
+  - type: input
+    id: windows
+    attributes:
+      label: Windows version
+      placeholder: Windows 11 24H2
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What you did, what you expected, and what happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: sample
+    attributes:
+      label: Sample file or screenshot
+      description: For encoding or right-to-left problems, a small sample file helps a lot. Don't attach anything private.

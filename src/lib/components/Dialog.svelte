@@ -51,27 +51,31 @@
     z-index: 60;
     display: grid;
     place-items: center;
-    background: rgb(0 0 0 / 0.28);
+    background: var(--backdrop);
+    -webkit-backdrop-filter: blur(3px);
+    backdrop-filter: blur(3px);
+    animation: daf-fade var(--dur-2) var(--ease-out);
   }
   .dialog {
     width: min(460px, calc(100vw - 32px));
-    padding: 20px 22px 16px;
+    padding: 22px 24px 18px;
     background: var(--surface-1);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    box-shadow: var(--shadow);
+    border-radius: var(--r-xl);
+    box-shadow: var(--glass-edge), var(--elev-3);
     outline: none;
+    animation: daf-rise var(--dur-3) var(--ease-spring);
   }
   h2 {
     margin: 0 0 8px;
-    font-size: 15px;
+    font-family: var(--ui-font-display);
+    font-size: 16px;
     font-weight: 600;
     overflow-wrap: anywhere;
   }
   p {
-    margin: 0 0 18px;
+    margin: 0 0 20px;
     color: var(--fg-muted);
-    line-height: 1.5;
+    line-height: 1.55;
   }
   .buttons {
     display: flex;
@@ -79,20 +83,31 @@
     justify-content: flex-end;
   }
   button {
-    min-width: 84px;
-    padding: 6px 14px;
-    border: 1px solid var(--border);
-    border-radius: 7px;
-    background: var(--surface-2);
+    min-width: 88px;
+    height: 32px;
+    padding: 0 16px;
+    border: none;
+    border-radius: var(--r-m);
+    background: var(--hover);
     cursor: pointer;
+    transition:
+      background var(--dur-1),
+      transform var(--dur-1);
   }
   button:hover {
-    background: var(--surface-3);
+    background: var(--pressed);
+  }
+  button:active {
+    transform: scale(0.97);
   }
   button.primary {
     background: var(--accent);
-    border-color: var(--accent);
     color: var(--accent-fg);
+    font-weight: 600;
+    box-shadow: 0 1px 2px rgb(0 0 0 / 0.12), 0 4px 12px color-mix(in srgb, var(--accent) 35%, transparent);
+  }
+  button.primary:hover {
+    background: var(--accent-hover);
   }
   button.danger {
     color: var(--danger);

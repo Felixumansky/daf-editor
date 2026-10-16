@@ -8,6 +8,8 @@ export interface LangDef {
   extensions: string[];
   /** Exact file names (e.g. "Dockerfile"). */
   names?: string[];
+  /** File-name pattern that wins over the extension (e.g. "passwords.txt"). */
+  match?: RegExp;
   /** Prose languages get automatic per-line direction; code stays left-to-right. */
   prose?: boolean;
   load: () => Promise<Extension>;
@@ -17,6 +19,7 @@ const legacy = (p: Promise<StreamParser<unknown>>) => p.then((parser) => StreamL
 
 export const LANGUAGES: LangDef[] = [
   { id: 'plain', label: 'Plain Text', extensions: ['txt', 'text', 'log'], prose: true, load: async () => [] },
+  { id: 'passwords', label: 'Passwords', extensions: ['pwd'], match: /passw|סיסמ|credential/i, prose: true, load: () => import('./passwords').then((m) => m.passwords()) },
   { id: 'markdown', label: 'Markdown', extensions: ['md', 'markdown', 'mdx'], prose: true, load: () => import('@codemirror/lang-markdown').then((m) => m.markdown()) },
   { id: 'javascript', label: 'JavaScript', extensions: ['js', 'mjs', 'cjs', 'jsx'], load: () => import('@codemirror/lang-javascript').then((m) => m.javascript({ jsx: true })) },
   { id: 'typescript', label: 'TypeScript', extensions: ['ts', 'mts', 'cts', 'tsx'], load: () => import('@codemirror/lang-javascript').then((m) => m.javascript({ typescript: true, jsx: true })) },
@@ -52,6 +55,7 @@ export function detectLanguage(fileName: string | null | undefined): string {
   if (!fileName) return 'plain';
   const base = fileName.split(/[\\/]/).pop() ?? fileName;
   for (const l of LANGUAGES) if (l.names?.includes(base)) return l.id;
+  for (const l of LANGUAGES) if (l.match?.test(base)) return l.id;
   const dot = base.lastIndexOf('.');
   const ext = (dot >= 0 ? base.slice(dot + 1) : base).toLowerCase();
   for (const l of LANGUAGES) if (l.extensions.includes(ext)) return l.id;
