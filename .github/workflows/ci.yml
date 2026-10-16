@@ -36,6 +36,7 @@ jobs:
       - uses: EmbarkStudios/cargo-deny-action@v2
         with:
           command: check licenses bans sources
+          rust-version: "1.99.1"
 
   test-rust:
     strategy:

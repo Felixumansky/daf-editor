@@ -26,10 +26,11 @@ confidence-threshold = 0.9
 
 [bans]
 multiple-versions = "allow"
-# daf-core must never talk to the network (trust pillar).
+# Daf's own code must never talk to the network (trust pillar). Tauri links an HTTP client
+# internally; it is allowed only through Tauri, never as a direct dependency of our crates.
 deny = [
-  { name = "reqwest", wrappers = [] },
-  { name = "hyper", wrappers = ["tauri", "tauri-runtime-wry", "wry"] },
+  { crate = "reqwest", wrappers = ["tauri"] },
+  { crate = "hyper", wrappers = ["reqwest", "hyper-util"] },
 ]
 
 [sources]
