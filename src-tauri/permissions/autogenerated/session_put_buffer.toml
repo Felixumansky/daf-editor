@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-session-put-buffer"
+description = "Enables the session_put_buffer command without any pre-configured scope."
+commands.allow = ["session_put_buffer"]
+
+[[permission]]
+identifier = "deny-session-put-buffer"
+description = "Denies the session_put_buffer command without any pre-configured scope."
+commands.deny = ["session_put_buffer"]

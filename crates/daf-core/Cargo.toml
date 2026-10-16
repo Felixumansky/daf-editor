@@ -1,0 +1,27 @@
+[package]
+name = "daf-core"
+description = "Daf editor core: encodings, file IO, session, settings. No Tauri dependency."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+encoding_rs = "0.8"
+chardetng = "0.1"
+memchr = "2"
+uuid = { version = "1", features = ["v7"] }
+xxhash-rust = { version = "0.8", features = ["xxh3"] }
+dunce = "1"
+tempfile = "3"
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_Storage_FileSystem"] }
+
+[dev-dependencies]
+proptest = "1"

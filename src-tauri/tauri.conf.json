@@ -1,0 +1,70 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Daf",
+  "mainBinaryName": "daf",
+  "version": "0.1.0",
+  "identifier": "dev.daf.editor",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "devUrl": "http://localhost:1420",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../build"
+  },
+  "app": {
+    "withGlobalTauri": false,
+    "windows": [
+      {
+        "label": "main",
+        "title": "Daf",
+        "width": 1200,
+        "height": 800,
+        "minWidth": 480,
+        "minHeight": 320,
+        "visible": false,
+        "dragDropEnabled": true
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: asset:; font-src 'self' data:; connect-src ipc: http://ipc.localhost; worker-src 'self' blob:; object-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none'",
+      "devCsp": "default-src 'self' http://localhost:1420 ws://localhost:1420; script-src 'self' 'unsafe-inline' http://localhost:1420; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: asset: http://localhost:1420; font-src 'self' data:; connect-src ipc: http://ipc.localhost http://localhost:1420 ws://localhost:1420; worker-src 'self' blob:; object-src 'none'; base-uri 'none'",
+      "freezePrototype": true
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["nsis"],
+    "publisher": "Felix Umansky",
+    "homepage": "https://github.com/Felixumansky/daf-editor",
+    "copyright": "Copyright (c) 2026 Felix Umansky. MPL-2.0.",
+    "license": "MPL-2.0",
+    "licenseFile": "../LICENSE",
+    "category": "DeveloperTool",
+    "shortDescription": "Fast, Hebrew-aware, trustworthy text editor",
+    "longDescription": "Daf is a lightweight text editor: tabs that are never lost, real encoding support (including Windows-1255), per-line right-to-left text, a command palette and Notepad++ shortcuts. No telemetry.",
+    "windows": {
+      "webviewInstallMode": { "type": "embedBootstrapper" },
+      "nsis": {
+        "installMode": "currentUser",
+        "languages": ["English"],
+        "displayLanguageSelector": false,
+        "installerIcon": "icons/icon.ico",
+        "startMenuFolder": "Daf"
+      }
+    },
+    "fileAssociations": [
+      {
+        "ext": ["txt", "log", "md", "markdown", "ini", "cfg", "conf", "csv", "tsv", "json", "jsonc", "xml", "yaml", "yml", "toml", "properties", "nfo"],
+        "name": "Daf Text Document",
+        "description": "Text document",
+        "role": "Editor"
+      }
+    ],
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ]
+  }
+}

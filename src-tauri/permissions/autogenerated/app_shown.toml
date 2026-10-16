@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-app-shown"
+description = "Enables the app_shown command without any pre-configured scope."
+commands.allow = ["app_shown"]
+
+[[permission]]
+identifier = "deny-app-shown"
+description = "Denies the app_shown command without any pre-configured scope."
+commands.deny = ["app_shown"]

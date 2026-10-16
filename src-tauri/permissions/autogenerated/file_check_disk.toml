@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-file-check-disk"
+description = "Enables the file_check_disk command without any pre-configured scope."
+commands.allow = ["file_check_disk"]
+
+[[permission]]
+identifier = "deny-file-check-disk"
+description = "Denies the file_check_disk command without any pre-configured scope."
+commands.deny = ["file_check_disk"]

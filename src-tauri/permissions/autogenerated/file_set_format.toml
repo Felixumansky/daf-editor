@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-file-set-format"
+description = "Enables the file_set_format command without any pre-configured scope."
+commands.allow = ["file_set_format"]
+
+[[permission]]
+identifier = "deny-file-set-format"
+description = "Denies the file_set_format command without any pre-configured scope."
+commands.deny = ["file_set_format"]

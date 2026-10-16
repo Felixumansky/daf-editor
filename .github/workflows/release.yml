@@ -1,0 +1,32 @@
+name: Release
+
+# Push a tag like v0.2.0 to build the Windows installer and attach it to a draft GitHub release.
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.99.1
+      - uses: Swatinem/rust-cache@v2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: Daf ${{ github.ref_name }}
+          releaseBody: See the README for what's new. Download `Daf_*_x64-setup.exe` and run it.
+          releaseDraft: true
+          prerelease: false

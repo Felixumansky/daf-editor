@@ -1,0 +1,37 @@
+# cargo-deny: https://embarkstudios.github.io/cargo-deny/
+[graph]
+all-features = true
+
+[advisories]
+yanked = "deny"
+
+[licenses]
+# Daf is MPL-2.0 and written from scratch; copyleft-incompatible or viral licenses are not allowed.
+allow = [
+  "MIT",
+  "Apache-2.0",
+  "Apache-2.0 WITH LLVM-exception",
+  "BSD-2-Clause",
+  "BSD-3-Clause",
+  "ISC",
+  "MPL-2.0",
+  "Zlib",
+  "Unicode-3.0",
+  "Unicode-DFS-2016",
+  "CC0-1.0",
+  "BSL-1.0",
+  "CDLA-Permissive-2.0",
+]
+confidence-threshold = 0.9
+
+[bans]
+multiple-versions = "allow"
+# daf-core must never talk to the network (trust pillar).
+deny = [
+  { name = "reqwest", wrappers = [] },
+  { name = "hyper", wrappers = ["tauri", "tauri-runtime-wry", "wry"] },
+]
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"

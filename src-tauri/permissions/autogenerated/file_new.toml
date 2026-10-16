@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-file-new"
+description = "Enables the file_new command without any pre-configured scope."
+commands.allow = ["file_new"]
+
+[[permission]]
+identifier = "deny-file-new"
+description = "Denies the file_new command without any pre-configured scope."
+commands.deny = ["file_new"]

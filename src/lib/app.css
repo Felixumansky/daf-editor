@@ -1,0 +1,131 @@
+/* Daf design tokens. Logical properties (inline-start/end) keep the chrome correct in RTL. */
+:root {
+  --ui-font: 'Segoe UI Variable Text', 'Segoe UI', system-ui, -apple-system, 'Noto Sans Hebrew', 'Arial Hebrew', sans-serif;
+  --ed-font: Consolas, monospace;
+  --ed-font-size: 14px;
+
+  --bg: #f6f6f4;
+  --surface-1: #ffffff;
+  --surface-2: #ececea;
+  --surface-3: #e2e2df;
+  --border: #d9d9d5;
+  --fg: #1f2328;
+  --fg-muted: #656d76;
+  --accent: #2f6feb;
+  --accent-fg: #ffffff;
+  --accent-soft: #dbe7ff;
+  --danger: #c4314b;
+  --danger-bg: #fde7eb;
+  --warn-bg: #fff4d6;
+  --warn-border: #e8c766;
+  --dirty: #d18616;
+  --shadow: 0 8px 28px rgb(0 0 0 / 0.16), 0 1px 3px rgb(0 0 0 / 0.1);
+
+  --ed-bg: #ffffff;
+  --ed-fg: #1f2328;
+  --ed-caret: #1f2328;
+  --ed-selection: #b4cdfa;
+  --ed-selection-blur: #d8e2f2;
+  /* Translucent on purpose: the selection layer is drawn underneath the line. */
+  --ed-active-line: rgb(47 111 235 / 0.05);
+  --ed-gutter-bg: #fafaf9;
+  --ed-gutter-fg: #9aa0a6;
+  --ed-match: #e3ebc8;
+  --ed-search: #ffe58f;
+  --ed-search-current: #ffc53d;
+  --ed-whitespace: #c4c4c0;
+
+  --tok-keyword: #a626a4;
+  --tok-string: #2b7a30;
+  --tok-number: #b35900;
+  --tok-comment: #7b828a;
+  --tok-function: #2a5bd7;
+  --tok-type: #0b7285;
+  --tok-property: #8a4d00;
+  --tok-definition: #1f2328;
+  --tok-punct: #4b535c;
+  --tok-meta: #7b5aa6;
+
+  color-scheme: light;
+}
+
+:root[data-theme='dark'] {
+  --bg: #1b1d21;
+  --surface-1: #24272c;
+  --surface-2: #2c3036;
+  --surface-3: #363b42;
+  --border: #3a3f46;
+  --fg: #e3e5e8;
+  --fg-muted: #9198a1;
+  --accent: #5b8def;
+  --accent-fg: #0d1117;
+  --accent-soft: #24365a;
+  --danger: #ff7b8a;
+  --danger-bg: #4a1f27;
+  --warn-bg: #3d3214;
+  --warn-border: #8a6d1f;
+  --dirty: #e3a33b;
+  --shadow: 0 10px 32px rgb(0 0 0 / 0.5), 0 1px 3px rgb(0 0 0 / 0.4);
+
+  --ed-bg: #1e2125;
+  --ed-fg: #dcdfe4;
+  --ed-caret: #f0f2f5;
+  --ed-selection: #31508a;
+  --ed-selection-blur: #2c3646;
+  --ed-active-line: rgb(255 255 255 / 0.04);
+  --ed-gutter-bg: #1e2125;
+  --ed-gutter-fg: #5f6670;
+  --ed-match: #3a4a2e;
+  --ed-search: #5c4a12;
+  --ed-search-current: #8a6a12;
+  --ed-whitespace: #4a5059;
+
+  --tok-keyword: #d197e8;
+  --tok-string: #93c98a;
+  --tok-number: #e9a66b;
+  --tok-comment: #7d8590;
+  --tok-function: #79a8ff;
+  --tok-type: #5fc4cf;
+  --tok-property: #e0b979;
+  --tok-definition: #dcdfe4;
+  --tok-punct: #a9b0b8;
+  --tok-meta: #b39ddb;
+
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--ui-font);
+  font-size: 13px;
+  -webkit-font-smoothing: antialiased;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+kbd,
+.kbd {
+  font-family: var(--ui-font);
+  font-size: 11px;
+  color: var(--fg-muted);
+  white-space: nowrap;
+  direction: ltr;
+  unicode-bidi: isolate;
+}

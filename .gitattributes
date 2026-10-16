@@ -1,0 +1,7 @@
+* text=auto eol=lf
+*.png binary
+*.ico binary
+*.icns binary
+# Encoding fixtures are compared byte-for-byte.
+crates/daf-core/tests/fixtures/** -text
+samples/** -text
